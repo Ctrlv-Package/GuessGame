@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms</value>
+  </resheader>
+
+  <data name="WindowTitle" xml:space="preserve">
+    <value>Игра Угадай Число Deluxe</value>
+  </data>
+  <data name="GuessPrompt" xml:space="preserve">
+    <value>Угадайте число:</value>
+  </data>
+  <data name="Easy" xml:space="preserve">
+    <value>Легко (1–50)</value>
+  </data>
+  <data name="Medium" xml:space="preserve">
+    <value>Средне (1–100)</value>
+  </data>
+  <data name="Hard" xml:space="preserve">
+    <value>Сложно (1–500)</value>
+  </data>
+  <data name="Guess" xml:space="preserve">
+    <value>Угадать</value>
+  </data>
+  <data name="TooLow" xml:space="preserve">
+    <value>Слишком мало!</value>
+  </data>
+  <data name="TooHigh" xml:space="preserve">
+    <value>Слишком много!</value>
+  </data>
+  <data name="InvalidInput" xml:space="preserve">
+    <value>Введите допустимое число.</value>
+  </data>
+  <data name="Attempts" xml:space="preserve">
+    <value>Попытки</value>
+  </data>
+  <data name="Time" xml:space="preserve">
+    <value>Время</value>
+  </data>
+  <data name="CongratsTitle" xml:space="preserve">
+    <value>🎉 Поздравляем!</value>
+  </data>
+  <data name="SuccessMessages" xml:space="preserve">
+    <value>Отлично!;Супер!;Молодец!;Ты читаешь мысли!;Ты экстрасенс?;Бум! Попал!;Ты наверняка жульничаешь 😆</value>
+  </data>
+</root>
