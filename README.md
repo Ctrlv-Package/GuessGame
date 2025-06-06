@@ -24,3 +24,14 @@ When you run the program you will be asked to guess a number between 1 and 100. 
 ## License
 
 This project is licensed under the MIT License. See [src/LICENSE](src/LICENSE) for details.
+
+## Troubleshooting
+
+### No sound on Linux/macOS
+
+The GUI uses `System.Media.SystemSounds` to play Windows sound events when you
+guess. These events are only available on platforms that provide the Windows
+sound theme. On Linux or macOS you might not hear any audio when using the GUI
+version of the game. If you want audible feedback on those systems, replace the
+calls to `SystemSounds.*.Play()` with a custom `SoundPlayer` playing a `.wav`
+file or ensure your desktop environment supports these system sounds.
