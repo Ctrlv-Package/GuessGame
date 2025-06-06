@@ -4,14 +4,17 @@ This repository contains a simple number guessing game written in C#. The game p
 
 ## Building and running
 
-Ensure you have the [.NET SDK](https://dotnet.microsoft.com/download) installed (version 8.0 or newer). To build and run the game from the command line:
+Ensure you have the [.NET SDK](https://dotnet.microsoft.com/download) installed (version 8.0 or newer). To build and run the games:
 
 ```bash
 # Restore dependencies and build
 dotnet build src/GuessGame.sln
 
-# Run the game
+# Run the console game
 dotnet run --project src/GuessGame
+
+# Run the GUI version
+dotnet run --project src/GuessGame.Gui
 ```
 
 ## Gameplay
