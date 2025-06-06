@@ -3,14 +3,13 @@ using System.Windows.Forms;
 
 namespace GuessGame.Gui
 {
-    static class Program
+    internal static class Program
     {
         [STAThread]
         static void Main()
         {
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new MainForm());
+            ApplicationConfiguration.Initialize(); // .NET 6/7/8
+            Application.Run(new MainForm());       // THIS must be called
         }
     }
 }
