@@ -8,7 +8,7 @@ Ensure you have the [.NET SDK](https://dotnet.microsoft.com/download) installed 
 
 ```bash
 # Restore dependencies and build
-dotnet build
+dotnet build src/GuessGame.sln
 
 # Run the game
 dotnet run --project src/GuessGame
@@ -20,4 +20,4 @@ When you run the program you will be asked to guess a number between 1 and 100. 
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+This project is licensed under the MIT License. See [src/LICENSE](src/LICENSE) for details.
