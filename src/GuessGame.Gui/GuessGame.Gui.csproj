@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
-
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
@@ -9,12 +8,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Default (English) resource -->
     <EmbeddedResource Include="Properties\Strings.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>Strings.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <EmbeddedResource Include="Properties\Strings.es.resx" />
-    <EmbeddedResource Include="Properties\Strings.ru.resx" />
-  </ItemGroup>
 
+    <!-- Spanish and Russian: must include WithCulture to compile as satellite -->
+    <EmbeddedResource Include="Properties\Strings.es.resx">
+      <WithCulture>true</WithCulture>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Strings.ru.resx">
+      <WithCulture>true</WithCulture>
+    </EmbeddedResource>
+  </ItemGroup>
 </Project>

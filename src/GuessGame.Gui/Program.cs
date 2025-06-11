@@ -8,8 +8,17 @@ namespace GuessGame.Gui
         [STAThread]
         static void Main()
         {
-            ApplicationConfiguration.Initialize(); // .NET 6/7/8
-            Application.Run(new MainForm());       // THIS must be called
+            // Global error handling logs
+            Application.ThreadException += (s, e) =>
+                MessageBox.Show("Unhandled Thread Exception: " + e.Exception.Message);
+
+            AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+                MessageBox.Show("Unhandled Domain Exception: " + ((Exception)e.ExceptionObject).Message);
+
+            MessageBox.Show("Main started");  // ✅ Startup checkpoint
+
+            ApplicationConfiguration.Initialize();
+            Application.Run(new MainForm());
         }
     }
 }

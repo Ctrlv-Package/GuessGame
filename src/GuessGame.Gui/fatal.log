@@ -1,0 +1,8 @@
+System.NullReferenceException: Object reference not set to an instance of an object.
+   at GuessGame.Gui.MainForm.UpdateUITexts() in C:\Projects\GuessGame\src\GuessGame.Gui\MainForm.cs:line 150
+   at GuessGame.Gui.MainForm.SwitchLanguage() in C:\Projects\GuessGame\src\GuessGame.Gui\MainForm.cs:line 137
+   at GuessGame.Gui.MainForm.<InitializeComponent>b__21_1(Object _, EventArgs _) in C:\Projects\GuessGame\src\GuessGame.Gui\MainForm.cs:line 66
+   at System.Windows.Forms.ComboBox.OnSelectedIndexChanged(EventArgs e)
+   at System.Windows.Forms.ComboBox.set_SelectedIndex(Int32 value)
+   at GuessGame.Gui.MainForm.InitializeComponent() in C:\Projects\GuessGame\src\GuessGame.Gui\MainForm.cs:line 67
+   at GuessGame.Gui.MainForm..ctor() in C:\Projects\GuessGame\src\GuessGame.Gui\MainForm.cs:line 37
