@@ -3,14 +3,12 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Media;
 using System.Resources;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-
-using GuessGame.Gui.Properties; 
+using GuessGame.Gui.Properties;
 
 namespace GuessGame.Gui
 {
@@ -28,68 +26,93 @@ namespace GuessGame.Gui
         private const string BestScoreFile = "bestscore.txt";
         private const string LeaderboardFile = "leaderboard.txt";
 
+        private bool _isInitializing = true;
+
         public MainForm()
         {
             Thread.CurrentThread.CurrentUICulture = CultureInfo.CurrentUICulture;
 
-            InitializeComponent();
-            Load += (_, _) => StartNewGame();
+            try
+            {
+                InitializeComponent();
+                Load += (_, _) => StartNewGame();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error during form initialization:\n" + ex, "Startup Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void InitializeComponent()
         {
-            Text = "🎯 " + Strings.WindowTitle;
-            Icon = SystemIcons.Information;
-            ClientSize = new Size(550, 320);
-            StartPosition = FormStartPosition.CenterScreen;
-            Font = new Font(Font.FontFamily, 14);
-            _defaultBackColor = BackColor;
+            try
+            {
+                Text = "🎯 " + Strings.WindowTitle;
+                Icon = SystemIcons.Information;
+                ClientSize = new Size(550, 320);
+                StartPosition = FormStartPosition.CenterScreen;
+                Font = new Font(Font.FontFamily, 14);
+                _defaultBackColor = BackColor;
 
-            _promptLabel = new Label { Text = Strings.GuessPrompt, AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
+                _promptLabel = new Label { Text = Strings.GuessPrompt, AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
 
-            _difficultyBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200, Font = new Font(Font.FontFamily, 14), Height = 40 };
-            _difficultyBox.Items.AddRange(new[] { Strings.Easy, Strings.Medium, Strings.Hard });
-            _difficultyBox.SelectedIndex = 1;
-            _difficultyBox.SelectedIndexChanged += (_, _) => ChangeDifficulty();
+                _difficultyBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200, Font = new Font(Font.FontFamily, 14), Height = 40 };
+                _difficultyBox.Items.AddRange(new[] { Strings.Easy, Strings.Medium, Strings.Hard });
+                _difficultyBox.SelectedIndex = 1;
+                _difficultyBox.SelectedIndexChanged += (_, _) => ChangeDifficulty();
 
-            _languageBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200, Font = new Font(Font.FontFamily, 14), Height = 40 };
-            _languageBox.Items.AddRange(new[] { "English", "Español", "Русский" });
-            _languageBox.SelectedIndexChanged += (_, _) => SwitchLanguage();
-            _languageBox.SelectedIndex = GetLanguageIndex();
+                _languageBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200, Font = new Font(Font.FontFamily, 14), Height = 40 };
+                _languageBox.Items.AddRange(new[] { "English", "Español", "Русский" });
+                _languageBox.SelectedIndexChanged += LanguageBox_SelectedIndexChanged;
+                _languageBox.SelectedIndex = GetLanguageIndex();
 
-            _inputBox = new TextBox { Font = new Font(Font.FontFamily, 14), Margin = new Padding(0, 5, 10, 5), MinimumSize = new Size(100, 35) };
+                _inputBox = new TextBox { Font = new Font(Font.FontFamily, 14), Margin = new Padding(0, 5, 10, 5), MinimumSize = new Size(100, 35) };
 
-            _guessButton = new Button { Text = Strings.Guess, Width = 100, Height = 40, BackColor = Color.MediumSlateBlue, ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font(Font.FontFamily, 12, FontStyle.Bold), Padding = new Padding(5, 2, 5, 2) };
-            _guessButton.Click += OnGuess;
-            AcceptButton = _guessButton;
+                _guessButton = new Button { Text = Strings.Guess, Width = 100, Height = 40, BackColor = Color.MediumSlateBlue, ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font(Font.FontFamily, 12, FontStyle.Bold), Padding = new Padding(5, 2, 5, 2) };
+                _guessButton.Click += OnGuess;
+                AcceptButton = _guessButton;
 
-            _resultLabel = new Label { AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
-            _attemptsLabel = new Label { AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
-            _timerLabel = new Label { AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
+                _resultLabel = new Label { AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
+                _attemptsLabel = new Label { AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
+                _timerLabel = new Label { AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
 
-            var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 7 };
-            for (int i = 0; i < 7; i++) layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100 / 7F));
+                var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 7 };
+                for (int i = 0; i < 7; i++) layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100 / 7F));
 
-            var langPanel = new TableLayoutPanel { Anchor = AnchorStyles.None, AutoSize = true };
-            langPanel.Controls.Add(_languageBox);
-            layout.Controls.Add(langPanel, 0, 0);
+                var langPanel = new TableLayoutPanel { Anchor = AnchorStyles.None, AutoSize = true };
+                langPanel.Controls.Add(_languageBox);
+                layout.Controls.Add(langPanel, 0, 0);
 
-            layout.Controls.Add(_promptLabel, 0, 1);
+                layout.Controls.Add(_promptLabel, 0, 1);
 
-            var difficultyPanel = new TableLayoutPanel { Anchor = AnchorStyles.None, AutoSize = true };
-            difficultyPanel.Controls.Add(_difficultyBox);
-            layout.Controls.Add(difficultyPanel, 0, 2);
+                var difficultyPanel = new TableLayoutPanel { Anchor = AnchorStyles.None, AutoSize = true };
+                difficultyPanel.Controls.Add(_difficultyBox);
+                layout.Controls.Add(difficultyPanel, 0, 2);
 
-            var inputPanel = new FlowLayoutPanel { Anchor = AnchorStyles.None, AutoSize = true };
-            inputPanel.Controls.Add(_inputBox);
-            inputPanel.Controls.Add(_guessButton);
-            layout.Controls.Add(inputPanel, 0, 3);
+                var inputPanel = new FlowLayoutPanel { Anchor = AnchorStyles.None, AutoSize = true };
+                inputPanel.Controls.Add(_inputBox);
+                inputPanel.Controls.Add(_guessButton);
+                layout.Controls.Add(inputPanel, 0, 3);
 
-            layout.Controls.Add(_resultLabel, 0, 4);
-            layout.Controls.Add(_attemptsLabel, 0, 5);
-            layout.Controls.Add(_timerLabel, 0, 6);
+                layout.Controls.Add(_resultLabel, 0, 4);
+                layout.Controls.Add(_attemptsLabel, 0, 5);
+                layout.Controls.Add(_timerLabel, 0, 6);
 
-            Controls.Add(layout);
+                Controls.Add(layout);
+
+                _isInitializing = false;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Initialization failed: " + ex.Message);
+                throw;
+            }
+        }
+
+        private void LanguageBox_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            if (_isInitializing) return;
+            SwitchLanguage();
         }
 
         private void ChangeDifficulty()
@@ -100,18 +123,29 @@ namespace GuessGame.Gui
 
         private void SwitchLanguage()
         {
-            var selected = _languageBox.SelectedItem?.ToString();
-            var culture = selected switch
+            try
             {
-                "Español" => "es",
-                "Русский" => "ru",
-                _ => "en"
-            };
+                var selected = _languageBox.SelectedItem?.ToString();
+                var culture = selected switch
+                {
+                    "Español" => "es",
+                    "Русский" => "ru",
+                    _ => "en"
+                };
 
-            Thread.CurrentThread.CurrentUICulture = new CultureInfo(culture);
-            Controls.Clear();
-            InitializeComponent();
-            StartNewGame();
+                Thread.CurrentThread.CurrentUICulture = new CultureInfo(culture);
+
+                Controls.Clear();
+                _isInitializing = true;
+                InitializeComponent();
+                _isInitializing = false;
+
+                StartNewGame();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Language switch failed: " + ex.Message);
+            }
         }
 
         private int GetLanguageIndex()
