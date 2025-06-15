@@ -53,7 +53,7 @@ namespace GuessGame.Gui
             {
                 Text = "🎯 " + Strings.WindowTitle;
                 Icon = SystemIcons.Information;
-                ClientSize = new Size(550, 320);
+                ClientSize = new Size(700, 500);
                 StartPosition = FormStartPosition.CenterScreen;
                 Font = new Font(Font.FontFamily, 14);
                 _defaultBackColor = BackColor;
@@ -72,7 +72,18 @@ namespace GuessGame.Gui
 
                 _inputBox = new TextBox { Font = new Font(Font.FontFamily, 14), Margin = new Padding(0, 5, 10, 5), MinimumSize = new Size(100, 35) };
 
-                _guessButton = new Button { Text = Strings.Guess, Width = 100, Height = 40, BackColor = Color.MediumSlateBlue, ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font(Font.FontFamily, 12, FontStyle.Bold), Padding = new Padding(5, 2, 5, 2) };
+                _guessButton = new Button
+                {
+                    Text = Strings.Guess,
+                    Width = 120,
+                    Height = 55,
+                    BackColor = Color.MediumSlateBlue,
+                    ForeColor = Color.White,
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font(Font.FontFamily, 14, FontStyle.Bold),
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    UseCompatibleTextRendering = true
+                };
                 _guessButton.Click += OnGuess;
                 AcceptButton = _guessButton;
 
@@ -96,9 +107,30 @@ namespace GuessGame.Gui
                 difficultyPanel.Controls.Add(_difficultyBox);
                 layout.Controls.Add(difficultyPanel, 0, 2);
 
-                var inputPanel = new FlowLayoutPanel { Anchor = AnchorStyles.None, AutoSize = true };
-                inputPanel.Controls.Add(_inputBox);
-                inputPanel.Controls.Add(_guessButton);
+                var inputPanel = new TableLayoutPanel
+                {
+                    Anchor = AnchorStyles.None,
+                    Size = new Size(300, 60),
+                    ColumnCount = 2,
+                    RowCount = 1,
+                    CellBorderStyle = TableLayoutPanelCellBorderStyle.None
+                };
+
+                inputPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+                inputPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+                inputPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+                var inputBoxPanel = new Panel { Height = 55, Width = 140 };
+                inputBoxPanel.Controls.Add(_inputBox);
+                _inputBox.Dock = DockStyle.Fill;
+
+                var guessButtonPanel = new Panel { Height = 55, Width = 140 };
+                guessButtonPanel.Controls.Add(_guessButton);
+                _guessButton.Dock = DockStyle.Fill;
+
+                inputPanel.Controls.Add(inputBoxPanel, 0, 0);
+                inputPanel.Controls.Add(guessButtonPanel, 1, 0);
+
                 layout.Controls.Add(inputPanel, 0, 3);
 
                 layout.Controls.Add(_resultLabel, 0, 4);

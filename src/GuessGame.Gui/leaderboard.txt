@@ -1,0 +1,4 @@
+pedro,6,29
+pedro,12,45
+pedro,7,45
+pedro,9,104
