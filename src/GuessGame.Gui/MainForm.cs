@@ -14,7 +14,9 @@ namespace GuessGame.Gui
 {
     public partial class MainForm : Form
     {
-        private Label _promptLabel, _resultLabel, _attemptsLabel, _timerLabel;
+        private Label _promptLabel, _resultLabel, _attemptsLabel, _timerLabel, _bestScoreLabel;
+        private ListBox _leaderboardBox;
+        private ProgressBar _progressBar;
         private TextBox _inputBox;
         private Button _guessButton;
         private ComboBox _difficultyBox, _languageBox;
@@ -25,6 +27,8 @@ namespace GuessGame.Gui
         private Color _defaultBackColor;
         private const string BestScoreFile = "bestscore.txt";
         private const string LeaderboardFile = "leaderboard.txt";
+        private SoundPlayer _winPlayer = new SoundPlayer(Path.Combine("Sounds", "win.wav"));
+        private SoundPlayer _losePlayer = new SoundPlayer(Path.Combine("Sounds", "lose.wav"));
 
         private bool _isInitializing = true;
 
@@ -75,9 +79,12 @@ namespace GuessGame.Gui
                 _resultLabel = new Label { AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
                 _attemptsLabel = new Label { AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
                 _timerLabel = new Label { AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
+                _bestScoreLabel = new Label { AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
+                _leaderboardBox = new ListBox { Dock = DockStyle.Fill, Height = 80 };
+                _progressBar = new ProgressBar { Dock = DockStyle.Fill, Maximum = 100 };
 
-                var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 7 };
-                for (int i = 0; i < 7; i++) layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100 / 7F));
+                var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 10 };
+                for (int i = 0; i < 10; i++) layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100 / 10F));
 
                 var langPanel = new TableLayoutPanel { Anchor = AnchorStyles.None, AutoSize = true };
                 langPanel.Controls.Add(_languageBox);
@@ -95,8 +102,11 @@ namespace GuessGame.Gui
                 layout.Controls.Add(inputPanel, 0, 3);
 
                 layout.Controls.Add(_resultLabel, 0, 4);
-                layout.Controls.Add(_attemptsLabel, 0, 5);
-                layout.Controls.Add(_timerLabel, 0, 6);
+                layout.Controls.Add(_progressBar, 0, 5);
+                layout.Controls.Add(_attemptsLabel, 0, 6);
+                layout.Controls.Add(_timerLabel, 0, 7);
+                layout.Controls.Add(_bestScoreLabel, 0, 8);
+                layout.Controls.Add(_leaderboardBox, 0, 9);
 
                 Controls.Add(layout);
 
@@ -167,9 +177,51 @@ namespace GuessGame.Gui
             _inputBox.Text = string.Empty;
             _attemptsLabel.Text = Strings.Attempts + ": 0";
             _timerLabel.Text = Strings.Time + ": 0s";
+            LoadScores();
             BackColor = _defaultBackColor;
+            _progressBar.Value = 0;
             _stopwatch.Restart();
             _inputBox.Focus();
+        }
+
+        private void LoadScores()
+        {
+            try
+            {
+                if (File.Exists(BestScoreFile))
+                {
+                    var text = File.ReadAllText(BestScoreFile).Trim();
+                    if (int.TryParse(text, out var best)) _bestScore = best;
+                }
+                _bestScoreLabel.Text = Strings.BestScore + $": {_bestScore}";
+
+                _leaderboardBox.Items.Clear();
+                if (File.Exists(LeaderboardFile))
+                {
+                    foreach (var line in File.ReadAllLines(LeaderboardFile))
+                        _leaderboardBox.Items.Add(line);
+                }
+                if (_leaderboardBox.Items.Count == 0)
+                    _leaderboardBox.Items.Add(Strings.NoScores);
+            }
+            catch { /* ignore */ }
+        }
+
+        private void RecordScore(int time)
+        {
+            try
+            {
+                if (_attempts < _bestScore)
+                {
+                    _bestScore = _attempts;
+                    File.WriteAllText(BestScoreFile, _bestScore.ToString());
+                }
+
+                var name = Environment.UserName;
+                var entry = $"{name},{_attempts},{time}";
+                File.AppendAllText(LeaderboardFile, entry + Environment.NewLine);
+            }
+            catch { /* ignore */ }
         }
 
         private void OnGuess(object? sender, EventArgs e)
@@ -188,21 +240,31 @@ namespace GuessGame.Gui
                 else if (distance <= 10) BackColor = Color.Khaki;
                 else BackColor = Color.LightCoral;
 
+                _progressBar.Value = Math.Min(100, 100 - (distance * 100 / _maxRange));
+
                 if (guess == _target)
                 {
                     _stopwatch.Stop();
-                    SystemSounds.Exclamation.Play();
+                    _winPlayer.Play();
                     var time = (int)_stopwatch.Elapsed.TotalSeconds;
                     var msg = _successMessages[_random.Next(_successMessages.Length)];
 
+                    RecordScore(time);
                     MessageBox.Show($"{msg}\n{Strings.Attempts}: {_attempts}\n{Strings.Time}: {time}s", Strings.CongratsTitle);
                     StartNewGame();
                     return;
                 }
                 else
                 {
-                    SystemSounds.Hand.Play();
+                    _losePlayer.Play();
                     _resultLabel.Text = guess < _target ? Strings.TooLow : Strings.TooHigh;
+                    if (_attempts >= 3)
+                    {
+                        if (distance <= 10 && distance > 0)
+                            _resultLabel.Text += " (" + Strings.Within10 + ")";
+                        else
+                            _resultLabel.Text += guess < _target ? " ↑" : " ↓";
+                    }
                 }
 
                 _timerLabel.Text = Strings.Time + $": {(int)_stopwatch.Elapsed.TotalSeconds}s";

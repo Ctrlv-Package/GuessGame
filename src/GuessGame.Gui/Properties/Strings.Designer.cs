@@ -10,41 +10,49 @@
 
 namespace GuessGame.Gui.Properties {
     using System;
-    
-    
+
+
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "8.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    internal class Strings {
-        
+    internal class Strings
+    {
+
         private static global::System.Resources.ResourceManager resourceMan;
-        
+
         private static global::System.Globalization.CultureInfo resourceCulture;
-        
-        internal Strings() {
+
+        internal Strings()
+        {
         }
-        
+
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
-        internal static global::System.Resources.ResourceManager ResourceManager {
-            get {
-                if (object.ReferenceEquals(resourceMan, null)) {
+        internal static global::System.Resources.ResourceManager ResourceManager
+        {
+            get
+            {
+                if (object.ReferenceEquals(resourceMan, null))
+                {
                     global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("GuessGame.Gui.Properties.Strings", typeof(Strings).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
             }
         }
-        
+
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
-        internal static global::System.Globalization.CultureInfo Culture {
-            get {
+        internal static global::System.Globalization.CultureInfo Culture
+        {
+            get
+            {
                 return resourceCulture;
             }
-            set {
+            set
+            {
                 resourceCulture = value;
             }
         }
-        
+
         internal static string WindowTitle => ResourceManager.GetString("WindowTitle", resourceCulture);
         internal static string GuessPrompt => ResourceManager.GetString("GuessPrompt", resourceCulture);
         internal static string Easy => ResourceManager.GetString("Easy", resourceCulture);
@@ -58,5 +66,9 @@ namespace GuessGame.Gui.Properties {
         internal static string Time => ResourceManager.GetString("Time", resourceCulture);
         internal static string CongratsTitle => ResourceManager.GetString("CongratsTitle", resourceCulture);
         internal static string SuccessMessages => ResourceManager.GetString("SuccessMessages", resourceCulture);
+        internal static string BestScore => ResourceManager.GetString("BestScore", resourceCulture);
+        internal static string Leaderboard => ResourceManager.GetString("Leaderboard", resourceCulture);
+        internal static string NoScores => ResourceManager.GetString("NoScores", resourceCulture);
+        internal static string Within10 => ResourceManager.GetString("Within10", resourceCulture);
     }
 }
