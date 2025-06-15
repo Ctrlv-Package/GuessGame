@@ -50,6 +50,18 @@
     <value>🎉 ¡Felicidades!</value>
   </data>
   <data name="SuccessMessages" xml:space="preserve">
-    <value>¡Buen trabajo!;¡Increíble!;¡Bien hecho!;¡Leíste mi mente!;¿Eres psíquico?;¡Boom! ¡Lo lograste!;Seguro que hiciste trampa 😆</value>
+    <value>¡Buen trabajo!;¡Increíble!;¡Bien hecho!;¡Leíste mi mente!;¿Eres psíquico?;¡Boom! ¡Lo lograste!;Seguro que hiciste trampa 😆;¡Imparable!;¡Adivinaste increíblemente!;¡Te sacaste la lotería!</value>
+  </data>
+  <data name="BestScore" xml:space="preserve">
+    <value>Mejor Puntaje</value>
+  </data>
+  <data name="Leaderboard" xml:space="preserve">
+    <value>Tabla de Puntos</value>
+  </data>
+  <data name="NoScores" xml:space="preserve">
+    <value>¡Sin puntajes aún!</value>
+  </data>
+  <data name="Within10" xml:space="preserve">
+    <value>dentro de 10</value>
   </data>
 </root>

@@ -22,4 +22,10 @@
       <WithCulture>true</WithCulture>
     </EmbeddedResource>
   </ItemGroup>
+  
+  <ItemGroup>
+    <None Include="Sounds\*.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

@@ -50,6 +50,18 @@
     <value>🎉 Congratulations</value>
   </data>
   <data name="SuccessMessages" xml:space="preserve">
-    <value>Great job!;Awesome!;Well done!;You read my mind!;Are you psychic?;Boom! Nailed it!;You must be cheating 😆</value>
+    <value>Great job!;Awesome!;Well done!;You read my mind!;Are you psychic?;Boom! Nailed it!;You must be cheating 😆;You're unstoppable!;Incredible guessing!;You hit the jackpot!</value>
+  </data>
+  <data name="BestScore" xml:space="preserve">
+    <value>Best Score</value>
+  </data>
+  <data name="Leaderboard" xml:space="preserve">
+    <value>Leaderboard</value>
+  </data>
+  <data name="NoScores" xml:space="preserve">
+    <value>No scores yet!</value>
+  </data>
+  <data name="Within10" xml:space="preserve">
+    <value>within 10</value>
   </data>
 </root>
