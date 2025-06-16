@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Media;
 using System.Resources;
 using System.Text;
@@ -29,15 +30,6 @@ namespace GuessGame.Gui
         private const string LeaderboardFile = "leaderboard.txt";
         private SoundPlayer _winPlayer = new SoundPlayer(Path.Combine("Sounds", "win.wav"));
         private static readonly string[] _loseSounds = Directory.GetFiles(Path.Combine("Sounds"), "lose*.wav");
-        
-        private void PlayRandomLoseSound()
-        {
-            if (_loseSounds.Length == 0) return;
-
-            string selectedSound = _loseSounds[_random.Next(_loseSounds.Length)];
-            SoundPlayer player = new SoundPlayer(selectedSound);
-            player.Play();
-        }
 
         private bool _isInitializing = true;
 
@@ -54,6 +46,15 @@ namespace GuessGame.Gui
             {
                 MessageBox.Show("Error during form initialization:\n" + ex, "Startup Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void PlayRandomLoseSound()
+        {
+            if (_loseSounds.Length == 0) return;
+
+            string selectedSound = _loseSounds[_random.Next(_loseSounds.Length)];
+            SoundPlayer player = new SoundPlayer(selectedSound);
+            player.Play();
         }
 
         private void InitializeComponent()
@@ -100,7 +101,7 @@ namespace GuessGame.Gui
                 _attemptsLabel = new Label { AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
                 _timerLabel = new Label { AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
                 _bestScoreLabel = new Label { AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
-                _leaderboardBox = new ListBox { Dock = DockStyle.Fill, Height = 80 };
+                _leaderboardBox = new ListBox { Dock = DockStyle.Fill, Height = 80, Font = new Font("Consolas", 12) };
                 _progressBar = new ProgressBar { Dock = DockStyle.Fill, Maximum = 100 };
 
                 var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 10 };
@@ -141,7 +142,6 @@ namespace GuessGame.Gui
                 inputPanel.Controls.Add(guessButtonPanel, 1, 0);
 
                 layout.Controls.Add(inputPanel, 0, 3);
-
                 layout.Controls.Add(_resultLabel, 0, 4);
                 layout.Controls.Add(_progressBar, 0, 5);
                 layout.Controls.Add(_attemptsLabel, 0, 6);
@@ -237,15 +237,41 @@ namespace GuessGame.Gui
                 _bestScoreLabel.Text = Strings.BestScore + $": {_bestScore}";
 
                 _leaderboardBox.Items.Clear();
+
                 if (File.Exists(LeaderboardFile))
                 {
-                    foreach (var line in File.ReadAllLines(LeaderboardFile))
-                        _leaderboardBox.Items.Add(line);
+                    var entries = File.ReadAllLines(LeaderboardFile)
+                        .Select(line =>
+                        {
+                            var parts = line.Split(',');
+                            return parts.Length == 3 &&
+                                   int.TryParse(parts[1], out int a) &&
+                                   int.TryParse(parts[2], out int t)
+                                ? new ScoreEntry { Name = parts[0], Attempts = a, Time = t }
+                                : null;
+                        })
+                        .Where(e => e != null)
+                        .OrderBy(e => e.Attempts)
+                        .ThenBy(e => e.Time)
+                        .Take(10)
+                        .ToList();
+
+                    _leaderboardBox.Items.Add("Name        Attempts   Time");
+                    _leaderboardBox.Items.Add("-----------------------------");
+
+                    foreach (var entry in entries)
+                        _leaderboardBox.Items.Add(entry);
                 }
+
                 if (_leaderboardBox.Items.Count == 0)
                     _leaderboardBox.Items.Add(Strings.NoScores);
             }
-            catch { /* ignore */ }
+            catch (Exception ex)
+            {
+                _leaderboardBox.Items.Clear();
+                _leaderboardBox.Items.Add("Failed to load leaderboard.");
+                Console.WriteLine("Leaderboard load error: " + ex.Message);
+            }
         }
 
         private void RecordScore(int time)
@@ -258,11 +284,60 @@ namespace GuessGame.Gui
                     File.WriteAllText(BestScoreFile, _bestScore.ToString());
                 }
 
-                var name = Environment.UserName;
+                string name = PromptForName();
                 var entry = $"{name},{_attempts},{time}";
                 File.AppendAllText(LeaderboardFile, entry + Environment.NewLine);
             }
             catch { /* ignore */ }
+        }
+
+        private string PromptForName()
+        {
+            using (Form prompt = new Form())
+            {
+                prompt.Width = 400;
+                prompt.Height = 180;
+                prompt.FormBorderStyle = FormBorderStyle.FixedDialog;
+                prompt.Text = "Enter Your Name";
+                prompt.StartPosition = FormStartPosition.CenterScreen;
+                prompt.MaximizeBox = false;
+                prompt.MinimizeBox = false;
+                prompt.BackColor = Color.White;
+
+                Label textLabel = new Label()
+                {
+                    Text = "Name:",
+                    Location = new Point(30, 30),
+                    AutoSize = true,
+                    Font = new Font("Segoe UI", 10)
+                };
+
+                TextBox inputBox = new TextBox()
+                {
+                    Location = new Point(100, 27),
+                    Size = new Size(250, 25),
+                    Font = new Font("Segoe UI", 10)
+                };
+
+                Button confirmation = new Button()
+                {
+                    Text = "OK",
+                    Size = new Size(80, 30),
+                    Location = new Point(270, 70),
+                    DialogResult = DialogResult.OK
+                };
+
+                prompt.Controls.Add(textLabel);
+                prompt.Controls.Add(inputBox);
+                prompt.Controls.Add(confirmation);
+                prompt.AcceptButton = confirmation;
+
+                var result = prompt.ShowDialog();
+
+                return result == DialogResult.OK && !string.IsNullOrWhiteSpace(inputBox.Text)
+                    ? inputBox.Text.Trim()
+                    : "Anonymous";
+            }
         }
 
         private void OnGuess(object? sender, EventArgs e)
@@ -318,4 +393,16 @@ namespace GuessGame.Gui
             _inputBox.Focus();
         }
     }
-}
+
+    public class ScoreEntry
+    {
+        public string Name { get; set; }
+        public int Attempts { get; set; }
+        public int Time { get; set; }
+
+        public override string ToString()
+        {
+            return $"{Name,-10}  {Attempts,3} tries  {Time,3}s";
+        }
+    }
+} 
