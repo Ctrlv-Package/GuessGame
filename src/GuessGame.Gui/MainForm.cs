@@ -28,7 +28,16 @@ namespace GuessGame.Gui
         private const string BestScoreFile = "bestscore.txt";
         private const string LeaderboardFile = "leaderboard.txt";
         private SoundPlayer _winPlayer = new SoundPlayer(Path.Combine("Sounds", "win.wav"));
-        private SoundPlayer _losePlayer = new SoundPlayer(Path.Combine("Sounds", "lose.wav"));
+        private static readonly string[] _loseSounds = Directory.GetFiles(Path.Combine("Sounds"), "lose*.wav");
+        
+        private void PlayRandomLoseSound()
+        {
+            if (_loseSounds.Length == 0) return;
+
+            string selectedSound = _loseSounds[_random.Next(_loseSounds.Length)];
+            SoundPlayer player = new SoundPlayer(selectedSound);
+            player.Play();
+        }
 
         private bool _isInitializing = true;
 
@@ -288,7 +297,7 @@ namespace GuessGame.Gui
                 }
                 else
                 {
-                    _losePlayer.Play();
+                    PlayRandomLoseSound();
                     _resultLabel.Text = guess < _target ? Strings.TooLow : Strings.TooHigh;
                     if (_attempts >= 3)
                     {

@@ -2,3 +2,7 @@ pedro,6,29
 pedro,12,45
 pedro,7,45
 pedro,9,104
+pedro,7,29
+pedro,9,47
+pedro,10,37
+pedro,10,83
