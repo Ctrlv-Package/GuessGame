@@ -1,4 +1,6 @@
-pedro,6,29
-pedro,12,45
-pedro,7,45
-pedro,9,104
+
+Anonymous,9,24
+Anonymous,9,22
+Pedro,8,17
+Anonymous,6,15
+Pedro,7,23
