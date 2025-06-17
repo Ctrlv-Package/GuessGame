@@ -27,7 +27,20 @@ namespace GuessGame.Gui
         private Stopwatch _stopwatch = new Stopwatch();
         private Color _defaultBackColor;
         private const string BestScoreFile = "bestscore.txt";
-        private const string LeaderboardFile = "leaderboard.txt";
+        private string LeaderboardFile
+        {
+            get
+            {
+                string diff = _difficultyBox.SelectedIndex switch
+                {
+                    0 => "easy",
+                    1 => "medium",
+                    2 => "hard",
+                    _ => "unknown"
+                };
+                return $"leaderboard_{diff}.txt";
+            }
+        }
         private SoundPlayer _winPlayer = new SoundPlayer(Path.Combine("Sounds", "win.wav"));
         private static readonly string[] _loseSounds = Directory.GetFiles(Path.Combine("Sounds"), "lose*.wav");
 
