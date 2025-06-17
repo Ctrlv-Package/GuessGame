@@ -63,7 +63,7 @@ namespace GuessGame.Gui
             {
                 Text = "🎯 " + Strings.WindowTitle;
                 Icon = SystemIcons.Information;
-                ClientSize = new Size(700, 500);
+                ClientSize = new Size(700, 600);
                 StartPosition = FormStartPosition.CenterScreen;
                 Font = new Font(Font.FontFamily, 14);
                 _defaultBackColor = BackColor;
@@ -101,11 +101,12 @@ namespace GuessGame.Gui
                 _attemptsLabel = new Label { AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
                 _timerLabel = new Label { AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
                 _bestScoreLabel = new Label { AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
-                _leaderboardBox = new ListBox { Dock = DockStyle.Fill, Height = 80, Font = new Font("Consolas", 12) };
+                _leaderboardBox = new ListBox { Dock = DockStyle.Fill, Height = 200, Font = new Font("Consolas", 12) };
                 _progressBar = new ProgressBar { Dock = DockStyle.Fill, Maximum = 100 };
 
                 var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 10 };
-                for (int i = 0; i < 10; i++) layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100 / 10F));
+                for (int i = 0; i < 9; i++) layout.RowStyles.Add(new RowStyle(SizeType.Percent, 8F));
+                layout.RowStyles.Add(new RowStyle(SizeType.Percent, 28F));
 
                 var langPanel = new TableLayoutPanel { Anchor = AnchorStyles.None, AutoSize = true };
                 langPanel.Controls.Add(_languageBox);
