@@ -98,17 +98,20 @@ namespace GuessGame.Gui
                 _guessButton = new Button
                 {
                     Text = Strings.Guess,
-                    Width = 120,
-                    Height = 55,
                     BackColor = Color.MediumSlateBlue,
                     ForeColor = Color.White,
                     FlatStyle = FlatStyle.Flat,
                     Font = new Font(Font.FontFamily, 14, FontStyle.Bold),
                     TextAlign = ContentAlignment.MiddleCenter,
-                    UseCompatibleTextRendering = true
+                    UseCompatibleTextRendering = true,
+                    Dock = DockStyle.Fill,
+                    Margin = new Padding(0, 5, 0, 5)
                 };
                 _guessButton.Click += OnGuess;
                 AcceptButton = _guessButton;
+                _guessButton.Enabled = false;
+                _inputBox.TextChanged += (_, _) =>
+                    _guessButton.Enabled = !string.IsNullOrWhiteSpace(_inputBox.Text);
 
                 _resultLabel = new Label { AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
                 _attemptsLabel = new Label { AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
@@ -144,13 +147,12 @@ namespace GuessGame.Gui
                 inputPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
                 inputPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
-                var inputBoxPanel = new Panel { Height = 55, Width = 140 };
+                var inputBoxPanel = new Panel { Dock = DockStyle.Fill };
                 inputBoxPanel.Controls.Add(_inputBox);
                 _inputBox.Dock = DockStyle.Fill;
 
-                var guessButtonPanel = new Panel { Height = 55, Width = 140 };
+                var guessButtonPanel = new Panel { Dock = DockStyle.Fill };
                 guessButtonPanel.Controls.Add(_guessButton);
-                _guessButton.Dock = DockStyle.Fill;
 
                 inputPanel.Controls.Add(inputBoxPanel, 0, 0);
                 inputPanel.Controls.Add(guessButtonPanel, 1, 0);
@@ -370,7 +372,8 @@ namespace GuessGame.Gui
                 else if (distance <= 10) BackColor = Color.Khaki;
                 else BackColor = Color.LightCoral;
 
-                _progressBar.Value = Math.Min(100, 100 - (distance * 100 / _maxRange));
+                int progress = 100 - (distance * 100 / _maxRange);
+                _progressBar.Value = Math.Clamp(progress, 0, 100);
 
                 if (guess == _target)
                 {
