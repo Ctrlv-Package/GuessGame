@@ -21,6 +21,10 @@ dotnet run --project src/GuessGame.Gui
 
 When you run the program you will be asked to guess a number between 1 and 100. After each guess the program indicates whether your guess was too high or too low until you find the correct number. The program also tells you how many attempts you needed.
 
+In the GUI version, each difficulty level keeps a separate leaderboard. Scores
+are stored in files named `leaderboard_easy.txt`, `leaderboard_medium.txt` and
+`leaderboard_hard.txt`.
+
 ## License
 
 This project is licensed under the MIT License. See [src/LICENSE](src/LICENSE) for details.
