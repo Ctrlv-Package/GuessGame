@@ -1,12 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Media;
-using System.Resources;
-using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using GuessGame.Gui.Properties;
@@ -16,278 +15,265 @@ namespace GuessGame.Gui
     public partial class MainForm : Form
     {
         private Label _promptLabel, _resultLabel, _attemptsLabel, _timerLabel, _bestScoreLabel;
-        private ListBox _leaderboardBox;
         private ProgressBar _progressBar;
         private TextBox _inputBox;
         private Button _guessButton;
-        private ComboBox _difficultyBox, _languageBox;
-        private Random _random = new Random();
-        private string[] _successMessages => Strings.SuccessMessages.Split(';');
+        private ComboBox _difficultyBox, _languageBox, _themeBox;
+        private DataGridView _leaderboardGrid;
+
+        private readonly Random _random = new();
         private int _target, _attempts, _bestScore = int.MaxValue, _maxRange = 100;
-        private Stopwatch _stopwatch = new Stopwatch();
+        private readonly Stopwatch _stopwatch = new();
         private Color _defaultBackColor;
         private const string BestScoreFile = "bestscore.txt";
-        private string LeaderboardFile
+        private string LeaderboardFile => _difficultyBox.SelectedIndex switch
         {
-            get
-            {
-                string diff = _difficultyBox.SelectedIndex switch
-                {
-                    0 => "easy",
-                    1 => "medium",
-                    2 => "hard",
-                    _ => "unknown"
-                };
-                return $"leaderboard_{diff}.txt";
-            }
-        }
-        private SoundPlayer _winPlayer = new SoundPlayer(Path.Combine("Sounds", "win.wav"));
-        private static readonly string[] _loseSounds = Directory.GetFiles(Path.Combine("Sounds"), "lose*.wav");
+            0 => "leaderboard_easy.txt",
+            1 => "leaderboard_medium.txt",
+            2 => "leaderboard_hard.txt",
+            _ => "leaderboard_unknown.txt"
+        };
 
+        private readonly SoundPlayer _winPlayer = new(Path.Combine("Sounds", "win.wav"));
+        private static readonly string[] _loseSounds = Directory.GetFiles(Path.Combine("Sounds"), "lose*.wav");
         private bool _isInitializing = true;
 
         public MainForm()
         {
             Thread.CurrentThread.CurrentUICulture = CultureInfo.CurrentUICulture;
-
-            try
-            {
-                InitializeComponent();
-                Load += (_, _) => StartNewGame();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error during form initialization:\n" + ex, "Startup Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void PlayRandomLoseSound()
-        {
-            if (_loseSounds.Length == 0) return;
-
-            string selectedSound = _loseSounds[_random.Next(_loseSounds.Length)];
-            SoundPlayer player = new SoundPlayer(selectedSound);
-            player.Play();
+            InitializeComponent();
+            Load += (_, _) => StartNewGame();
         }
 
         private void InitializeComponent()
         {
-            try
+            Text = "🎯 " + Strings.WindowTitle;
+            ClientSize = new Size(800, 650);
+            StartPosition = FormStartPosition.CenterScreen;
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            Font = new Font("Segoe UI", 14);
+            _defaultBackColor = Color.WhiteSmoke;
+            BackColor = _defaultBackColor;
+
+            // Top bar: language, difficulty, theme
+            _languageBox = CreateComboBox(new[] { "English", "Español", "Русский" }, GetLanguageIndex());
+            _languageBox.SelectedIndexChanged += LanguageBox_SelectedIndexChanged;
+
+            _difficultyBox = CreateComboBox(new[] { Strings.Easy, Strings.Medium, Strings.Hard }, 1);
+            _difficultyBox.SelectedIndexChanged += (_, _) => ChangeDifficulty();
+
+            _themeBox = CreateComboBox(new[] { "Light Mode", "Dark Mode" }, 0);
+            _themeBox.SelectedIndexChanged += (_, _) => ToggleTheme();
+
+            var topPanel = new TableLayoutPanel
             {
-                Text = "🎯 " + Strings.WindowTitle;
-                Icon = SystemIcons.Information;
-                ClientSize = new Size(700, 600);
-                StartPosition = FormStartPosition.CenterScreen;
-                BackColor = Color.FromArgb(245, 245, 245);
-                FormBorderStyle = FormBorderStyle.FixedSingle;
-                Font = new Font("Segoe UI", 14);
-                _defaultBackColor = BackColor;
+                Dock = DockStyle.Top,
+                Height = 60,
+                ColumnCount = 5,
+                Padding = new Padding(10),
+                BackColor = Color.FromArgb(240, 240, 240)
+            };
+            // Add spacing columns between controls
+            topPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20)); // Left spacing
+            topPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            topPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            topPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            topPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20)); // Right spacing
+            
+            void SetupComboBox(ComboBox box)
+            {
+                box.Width = 180;
+                box.Anchor = AnchorStyles.None;
+                box.DropDownStyle = ComboBoxStyle.DropDownList;
+                box.Font = new Font("Segoe UI", 12);
+                box.Cursor = Cursors.Hand;
+                box.BackColor = Color.White;
+                box.FlatStyle = FlatStyle.Flat;
+            }
+            
+            SetupComboBox(_languageBox);
+            SetupComboBox(_difficultyBox);
+            SetupComboBox(_themeBox);
+            
+            topPanel.Controls.Add(_languageBox, 1, 0);
+            topPanel.Controls.Add(_difficultyBox, 2, 0);
+            topPanel.Controls.Add(_themeBox, 3, 0);
 
-                _promptLabel = new Label
-                {
-                    Text = Strings.GuessPrompt,
-                    AutoSize = true,
-                    TextAlign = ContentAlignment.MiddleCenter,
-                    Dock = DockStyle.Fill,
-                    Font = new Font("Segoe UI", 16, FontStyle.Bold)
-                };
+            // Prompt
+            _promptLabel = new Label
+            {
+                Text = Strings.GuessPrompt,
+                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Dock = DockStyle.Top,
+                Height = 60,
+                Padding = new Padding(0, 10, 0, 10)
+            };
 
-                _difficultyBox = new ComboBox
-                {
-                    DropDownStyle = ComboBoxStyle.DropDownList,
-                    FlatStyle = FlatStyle.Flat,
-                    Width = 200,
-                    Font = new Font("Segoe UI", 14),
-                    Height = 40
-                };
-                _difficultyBox.Items.AddRange(new[] { Strings.Easy, Strings.Medium, Strings.Hard });
-                _difficultyBox.SelectedIndex = 1;
-                _difficultyBox.SelectedIndexChanged += (_, _) => ChangeDifficulty();
+            // Input + Button centered below prompt
+            _inputBox = new TextBox
+            {
+                Font = new Font("Segoe UI", 16),
+                Width = 200,
+                Height = 35,
+                BorderStyle = BorderStyle.FixedSingle,
+                BackColor = Color.White
+            };
+            _inputBox.Enter += (s, e) => _inputBox.BackColor = Color.FromArgb(240, 248, 255);  // Light blue when focused
+            _inputBox.Leave += (s, e) => _inputBox.BackColor = Color.White;
+            _inputBox.TextChanged += (_, _) => _guessButton.Enabled = !string.IsNullOrWhiteSpace(_inputBox.Text);
 
-                _languageBox = new ComboBox
-                {
-                    DropDownStyle = ComboBoxStyle.DropDownList,
-                    FlatStyle = FlatStyle.Flat,
-                    Width = 200,
-                    Font = new Font("Segoe UI", 14),
-                    Height = 40
-                };
-                _languageBox.Items.AddRange(new[] { "English", "Español", "Русский" });
-                _languageBox.SelectedIndexChanged += LanguageBox_SelectedIndexChanged;
-                _languageBox.SelectedIndex = GetLanguageIndex();
+            _guessButton = new Button
+            {
+                Text = Strings.Guess,
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                BackColor = Color.FromArgb(0, 120, 215),
+                ForeColor = Color.White,
+                Width = 140,
+                Height = 50,
+                FlatStyle = FlatStyle.Flat,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Cursor = Cursors.Hand
+            };
+            _guessButton.FlatAppearance.BorderSize = 0;
+            _guessButton.MouseEnter += (s, e) => _guessButton.BackColor = Color.FromArgb(0, 100, 200);
+            _guessButton.MouseLeave += (s, e) => _guessButton.BackColor = Color.FromArgb(0, 120, 215);
+            _guessButton.Click += OnGuess;
+            AcceptButton = _guessButton;
+            _guessButton.Enabled = false;
 
-                _inputBox = new TextBox
-                {
-                    Font = new Font("Segoe UI", 14),
-                    Margin = new Padding(0, 5, 10, 5),
-                    MinimumSize = new Size(100, 35),
-                    BorderStyle = BorderStyle.FixedSingle
-                };
+            var inputPanel = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                Height = 70,
+                ColumnCount = 3,
+                RowCount = 1,
+                Padding = new Padding(0, 15, 0, 15)
+            };
+            inputPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            inputPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            inputPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            
+            var inputContainer = new FlowLayoutPanel
+            {
+                AutoSize = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false
+            };
+            inputContainer.Controls.AddRange(new Control[] { _inputBox, _guessButton });
+            _guessButton.Margin = new Padding(10, 0, 0, 0);
+            
+            inputPanel.Controls.Add(inputContainer, 1, 0);
 
-                _guessButton = new Button
+            // Game status
+            _resultLabel = CreateCenterLabel();
+            _attemptsLabel = CreateCenterLabel();
+            _timerLabel = CreateCenterLabel();
+            _bestScoreLabel = CreateCenterLabel();
+            _progressBar = new ProgressBar
+            {
+                Dock = DockStyle.Top,
+                Height = 25,
+                Maximum = 100,
+                Style = ProgressBarStyle.Continuous,
+                MarqueeAnimationSpeed = 0,  // Disable marquee animation
+                ForeColor = Color.FromArgb(0, 120, 215)  // Match button color
+            };
+
+            // Leaderboard
+            var leaderboardLabel = new Label
+            {
+                Text = "🏆 Leaderboard",
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Dock = DockStyle.Top,
+                Height = 40,
+                Padding = new Padding(0, 10, 0, 0)
+            };
+
+            _leaderboardGrid = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                ReadOnly = true,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                RowHeadersVisible = false,
+                BorderStyle = BorderStyle.None,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                Font = new Font("Segoe UI", 14),
+                BackgroundColor = Color.White,
+                GridColor = Color.FromArgb(230, 230, 230),
+                AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle
                 {
-                    Text = Strings.Guess,
+                    BackColor = Color.FromArgb(250, 250, 250)
+                },
+                ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
+                {
+                    Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                    Alignment = DataGridViewContentAlignment.MiddleCenter,
                     BackColor = Color.FromArgb(0, 120, 215),
-                    ForeColor = Color.White,
-                    FlatStyle = FlatStyle.Flat,
-                    Font = new Font("Segoe UI", 14, FontStyle.Bold),
-                    TextAlign = ContentAlignment.MiddleCenter,
-                    UseCompatibleTextRendering = true,
-                    Dock = DockStyle.Fill,
-                    Margin = new Padding(0, 5, 0, 5)
-                };
-                _guessButton.FlatAppearance.BorderSize = 0;
-                _guessButton.Click += OnGuess;
-                AcceptButton = _guessButton;
-                _guessButton.Enabled = false;
-                _inputBox.TextChanged += (_, _) =>
-                    _guessButton.Enabled = !string.IsNullOrWhiteSpace(_inputBox.Text);
-
-                _resultLabel = new Label
+                    ForeColor = Color.White
+                },
+                DefaultCellStyle = new DataGridViewCellStyle
                 {
-                    AutoSize = true,
-                    TextAlign = ContentAlignment.MiddleCenter,
-                    Dock = DockStyle.Fill,
-                    Font = new Font("Segoe UI", 12)
-                };
-                _attemptsLabel = new Label
-                {
-                    AutoSize = true,
-                    TextAlign = ContentAlignment.MiddleCenter,
-                    Dock = DockStyle.Fill,
-                    Font = new Font("Segoe UI", 12)
-                };
-                _timerLabel = new Label
-                {
-                    AutoSize = true,
-                    TextAlign = ContentAlignment.MiddleCenter,
-                    Dock = DockStyle.Fill,
-                    Font = new Font("Segoe UI", 12)
-                };
-                _bestScoreLabel = new Label
-                {
-                    AutoSize = true,
-                    TextAlign = ContentAlignment.MiddleCenter,
-                    Dock = DockStyle.Fill,
-                    Font = new Font("Segoe UI", 12)
-                };
-                _leaderboardBox = new ListBox
-                {
-                    Dock = DockStyle.Fill,
-                    Height = 200,
-                    Font = new Font("Consolas", 12),
-                    BorderStyle = BorderStyle.None
-                };
-                _progressBar = new ProgressBar
-                {
-                    Dock = DockStyle.Fill,
-                    Maximum = 100,
-                    Style = ProgressBarStyle.Continuous
-                };
+                    Alignment = DataGridViewContentAlignment.MiddleCenter,
+                    SelectionBackColor = Color.LightGray,
+                    SelectionForeColor = Color.Black
+                }
+            };
+            _leaderboardGrid.Columns.Add("Name", "Name");
+            _leaderboardGrid.Columns.Add("Attempts", "Attempts");
+            _leaderboardGrid.Columns.Add("Time", "Time (s)");
 
-                var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 10 };
-                for (int i = 0; i < 9; i++) layout.RowStyles.Add(new RowStyle(SizeType.Percent, 8F));
-                layout.RowStyles.Add(new RowStyle(SizeType.Percent, 28F));
+            // Main layout
+            var layout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 12 };
+            layout.RowStyles.Clear();
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 60)); // Top Panel
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 60)); // Prompt
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 70)); // Input panel
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40)); // Result
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30)); // Progress
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40)); // Attempts
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40)); // Timer
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40)); // Best Score
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 60)); // Leaderboard title with padding
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30)); // Spacing
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); // Leaderboard
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 0)); // No bottom spacer needed
 
-                var langPanel = new TableLayoutPanel { Anchor = AnchorStyles.None, AutoSize = true };
-                langPanel.Controls.Add(_languageBox);
-                layout.Controls.Add(langPanel, 0, 0);
+            layout.Controls.Add(topPanel, 0, 0);
+            layout.Controls.Add(_promptLabel, 0, 1);
+            layout.Controls.Add(inputPanel, 0, 2);
+            layout.Controls.Add(_resultLabel, 0, 3);
+            layout.Controls.Add(_progressBar, 0, 4);
+            layout.Controls.Add(_attemptsLabel, 0, 5);
+            layout.Controls.Add(_timerLabel, 0, 6);
+            layout.Controls.Add(_bestScoreLabel, 0, 7);
+            layout.Controls.Add(leaderboardLabel, 0, 8);
+            layout.Controls.Add(new Label(), 0, 9);
+            layout.Controls.Add(_leaderboardGrid, 0, 10);
 
-                layout.Controls.Add(_promptLabel, 0, 1);
-
-                var difficultyPanel = new TableLayoutPanel { Anchor = AnchorStyles.None, AutoSize = true };
-                difficultyPanel.Controls.Add(_difficultyBox);
-                layout.Controls.Add(difficultyPanel, 0, 2);
-
-                var inputPanel = new TableLayoutPanel
-                {
-                    Anchor = AnchorStyles.None,
-                    Size = new Size(300, 60),
-                    ColumnCount = 2,
-                    RowCount = 1,
-                    CellBorderStyle = TableLayoutPanelCellBorderStyle.None
-                };
-
-                inputPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-                inputPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-                inputPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-
-                var inputBoxPanel = new Panel { Dock = DockStyle.Fill };
-                inputBoxPanel.Controls.Add(_inputBox);
-                _inputBox.Dock = DockStyle.Fill;
-
-                var guessButtonPanel = new Panel { Dock = DockStyle.Fill };
-                guessButtonPanel.Controls.Add(_guessButton);
-
-                inputPanel.Controls.Add(inputBoxPanel, 0, 0);
-                inputPanel.Controls.Add(guessButtonPanel, 1, 0);
-
-                layout.Controls.Add(inputPanel, 0, 3);
-                layout.Controls.Add(_resultLabel, 0, 4);
-                layout.Controls.Add(_progressBar, 0, 5);
-                layout.Controls.Add(_attemptsLabel, 0, 6);
-                layout.Controls.Add(_timerLabel, 0, 7);
-                layout.Controls.Add(_bestScoreLabel, 0, 8);
-                layout.Controls.Add(_leaderboardBox, 0, 9);
-
-                Controls.Add(layout);
-
-                _isInitializing = false;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Initialization failed: " + ex.Message);
-                throw;
-            }
+            Controls.Add(layout);
+            _isInitializing = false;
         }
 
-        private void LanguageBox_SelectedIndexChanged(object? sender, EventArgs e)
+        private ComboBox CreateComboBox(string[] items, int defaultIndex)
         {
-            if (_isInitializing) return;
-            SwitchLanguage();
+            var combo = new ComboBox();
+            combo.Items.AddRange(items);
+            combo.SelectedIndex = defaultIndex;
+            return combo;
         }
 
-        private void ChangeDifficulty()
+        private Label CreateCenterLabel()
         {
-            _maxRange = _difficultyBox.SelectedIndex switch { 0 => 50, 1 => 100, 2 => 500, _ => 100 };
-            StartNewGame();
-        }
-
-        private void SwitchLanguage()
-        {
-            try
+            return new Label
             {
-                var selected = _languageBox.SelectedItem?.ToString();
-                var culture = selected switch
-                {
-                    "Español" => "es",
-                    "Русский" => "ru",
-                    _ => "en"
-                };
-
-                Thread.CurrentThread.CurrentUICulture = new CultureInfo(culture);
-
-                Controls.Clear();
-                _isInitializing = true;
-                InitializeComponent();
-                _isInitializing = false;
-
-                StartNewGame();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Language switch failed: " + ex.Message);
-            }
-        }
-
-        private int GetLanguageIndex()
-        {
-            var lang = Thread.CurrentThread.CurrentUICulture.TwoLetterISOLanguageName;
-            return lang switch
-            {
-                "es" => 1,
-                "ru" => 2,
-                _ => 0
+                AutoSize = true,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Dock = DockStyle.Top,
+                Font = new Font("Segoe UI", 12)
             };
         }
 
@@ -295,8 +281,8 @@ namespace GuessGame.Gui
         {
             _target = _random.Next(1, _maxRange + 1);
             _attempts = 0;
-            _resultLabel.Text = string.Empty;
-            _inputBox.Text = string.Empty;
+            _resultLabel.Text = "";
+            _inputBox.Text = "";
             _attemptsLabel.Text = Strings.Attempts + ": 0";
             _timerLabel.Text = Strings.Time + ": 0s";
             LoadScores();
@@ -306,185 +292,241 @@ namespace GuessGame.Gui
             _inputBox.Focus();
         }
 
+        private void OnGuess(object? sender, EventArgs e)
+        {
+            if (!int.TryParse(_inputBox.Text, out int guess))
+            {
+                _resultLabel.Text = Strings.InvalidInput;
+                return;
+            }
+
+            _inputBox.Clear();
+            _attempts++;
+            _attemptsLabel.Text = Strings.Attempts + $": {_attempts}";
+            int distance = Math.Abs(guess - _target);
+            BackColor = distance switch
+            {
+                0 => Color.LightGreen,
+                <= 5 => Color.LightGoldenrodYellow,
+                <= 10 => Color.Khaki,
+                _ => Color.LightCoral
+            };
+            _progressBar.Value = Math.Clamp(100 - distance * 100 / _maxRange, 0, 100);
+
+            if (guess == _target)
+            {
+                _stopwatch.Stop();
+                _winPlayer.Play();
+                int time = (int)_stopwatch.Elapsed.TotalSeconds;
+                RecordScore(time);
+                MessageBox.Show($"🎉 You guessed it!\nAttempts: {_attempts}\nTime: {time}s", Strings.CongratsTitle);
+                StartNewGame();
+            }
+            else
+            {
+                new SoundPlayer(_loseSounds[_random.Next(_loseSounds.Length)]).Play();
+                _resultLabel.Text = guess < _target ? Strings.TooLow : Strings.TooHigh;
+            }
+
+            _timerLabel.Text = Strings.Time + $": {(int)_stopwatch.Elapsed.TotalSeconds}s";
+        }
+
+        private void ToggleTheme()
+        {
+            bool dark = _themeBox.SelectedIndex == 1;
+            var bg = dark ? Color.FromArgb(30, 30, 30) : Color.WhiteSmoke;
+            var fg = dark ? Color.White : Color.Black;
+
+            foreach (Control c in ControlsRecursive(this))
+            {
+                c.BackColor = bg;
+                c.ForeColor = fg;
+            }
+
+            BackColor = _defaultBackColor = bg;
+            _guessButton.BackColor = dark ? Color.FromArgb(0, 100, 200) : Color.FromArgb(0, 120, 215);
+        }
+
+        private IEnumerable<Control> ControlsRecursive(Control parent)
+        {
+            foreach (Control child in parent.Controls)
+            {
+                yield return child;
+                foreach (var grandChild in ControlsRecursive(child))
+                    yield return grandChild;
+            }
+        }
+
+        private void ChangeDifficulty()
+        {
+            _maxRange = _difficultyBox.SelectedIndex switch { 0 => 50, 1 => 100, 2 => 500, _ => 100 };
+            StartNewGame();
+        }
+
+        private void LanguageBox_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            if (_isInitializing) return;
+
+            var culture = _languageBox.SelectedItem?.ToString() switch
+            {
+                "Español" => "es",
+                "Русский" => "ru",
+                _ => "en"
+            };
+
+            Thread.CurrentThread.CurrentUICulture = new CultureInfo(culture);
+            Controls.Clear();
+            _isInitializing = true;
+            InitializeComponent();
+            _isInitializing = false;
+            StartNewGame();
+        }
+
+        private int GetLanguageIndex() =>
+            Thread.CurrentThread.CurrentUICulture.TwoLetterISOLanguageName switch
+            {
+                "es" => 1,
+                "ru" => 2,
+                _ => 0
+            };
+
         private void LoadScores()
         {
-            try
-            {
-                if (File.Exists(BestScoreFile))
-                {
-                    var text = File.ReadAllText(BestScoreFile).Trim();
-                    if (int.TryParse(text, out var best)) _bestScore = best;
-                }
-                _bestScoreLabel.Text = Strings.BestScore + $": {_bestScore}";
+            _leaderboardGrid.Rows.Clear();
+            if (File.Exists(BestScoreFile) && int.TryParse(File.ReadAllText(BestScoreFile).Trim(), out int best))
+                _bestScore = best;
 
-                _leaderboardBox.Items.Clear();
+            _bestScoreLabel.Text = Strings.BestScore + $": {_bestScore}";
 
-                if (File.Exists(LeaderboardFile))
-                {
-                    var entries = File.ReadAllLines(LeaderboardFile)
-                        .Select(line =>
-                        {
-                            var parts = line.Split(',');
-                            return parts.Length == 3 &&
-                                   int.TryParse(parts[1], out int a) &&
-                                   int.TryParse(parts[2], out int t)
-                                ? new ScoreEntry { Name = parts[0], Attempts = a, Time = t }
-                                : null;
-                        })
-                        .Where(e => e != null)
-                        .OrderBy(e => e.Attempts)
-                        .ThenBy(e => e.Time)
-                        .Take(10)
-                        .ToList();
+            if (!File.Exists(LeaderboardFile)) return;
 
-                    _leaderboardBox.Items.Add("Name        Attempts   Time");
-                    _leaderboardBox.Items.Add("-----------------------------");
+            var entries = File.ReadAllLines(LeaderboardFile)
+                .Select(line => line.Split(','))
+                .Where(parts => parts.Length == 3 && int.TryParse(parts[1], out _) && int.TryParse(parts[2], out _))
+                .Select(parts => new ScoreEntry(parts[0], int.Parse(parts[1]), int.Parse(parts[2])))
+                .OrderBy(e => e.Attempts).ThenBy(e => e.Time).Take(10);
 
-                    foreach (var entry in entries)
-                        _leaderboardBox.Items.Add(entry);
-                }
-
-                if (_leaderboardBox.Items.Count == 0)
-                    _leaderboardBox.Items.Add(Strings.NoScores);
-            }
-            catch (Exception ex)
-            {
-                _leaderboardBox.Items.Clear();
-                _leaderboardBox.Items.Add("Failed to load leaderboard.");
-                Console.WriteLine("Leaderboard load error: " + ex.Message);
-            }
+            foreach (var e in entries)
+                _leaderboardGrid.Rows.Add(e.Name, e.Attempts, e.Time);
         }
 
         private void RecordScore(int time)
         {
-            try
+            if (_attempts < _bestScore)
             {
-                if (_attempts < _bestScore)
-                {
-                    _bestScore = _attempts;
-                    File.WriteAllText(BestScoreFile, _bestScore.ToString());
-                }
-
-                string name = PromptForName();
-                var entry = $"{name},{_attempts},{time}";
-                File.AppendAllText(LeaderboardFile, entry + Environment.NewLine);
+                _bestScore = _attempts;
+                File.WriteAllText(BestScoreFile, _bestScore.ToString());
             }
-            catch { /* ignore */ }
+
+            string name = PromptForName();
+            File.AppendAllText(LeaderboardFile, $"{name},{_attempts},{time}{Environment.NewLine}");
         }
 
         private string PromptForName()
         {
-            using (Form prompt = new Form())
+            using var form = new Form
             {
-                prompt.Width = 400;
-                prompt.Height = 180;
-                prompt.FormBorderStyle = FormBorderStyle.FixedDialog;
-                prompt.Text = "Enter Your Name";
-                prompt.StartPosition = FormStartPosition.CenterScreen;
-                prompt.MaximizeBox = false;
-                prompt.MinimizeBox = false;
-                prompt.BackColor = Color.White;
+                Text = Strings.WindowTitle,
+                Width = 400,
+                Height = 200,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition = FormStartPosition.CenterParent,
+                BackColor = Color.WhiteSmoke,
+                Padding = new Padding(20)
+            };
 
-                Label textLabel = new Label()
-                {
-                    Text = "Name:",
-                    Location = new Point(30, 30),
-                    AutoSize = true,
-                    Font = new Font("Segoe UI", 10)
-                };
-
-                TextBox inputBox = new TextBox()
-                {
-                    Location = new Point(100, 27),
-                    Size = new Size(250, 25),
-                    Font = new Font("Segoe UI", 10)
-                };
-
-                Button confirmation = new Button()
-                {
-                    Text = "OK",
-                    Size = new Size(80, 30),
-                    Location = new Point(270, 70),
-                    DialogResult = DialogResult.OK
-                };
-
-                prompt.Controls.Add(textLabel);
-                prompt.Controls.Add(inputBox);
-                prompt.Controls.Add(confirmation);
-                prompt.AcceptButton = confirmation;
-
-                var result = prompt.ShowDialog();
-
-                return result == DialogResult.OK && !string.IsNullOrWhiteSpace(inputBox.Text)
-                    ? inputBox.Text.Trim()
-                    : "Anonymous";
-            }
-        }
-
-        private void OnGuess(object? sender, EventArgs e)
-        {
-            string input = _inputBox.Text;
-            _inputBox.Clear();
-
-            if (int.TryParse(input, out int guess))
+            var label = new Label
             {
-                _attempts++;
-                _attemptsLabel.Text = Strings.Attempts + $": {_attempts}";
+                Text = "Enter your name for the leaderboard:",
+                Font = new Font("Segoe UI", 12),
+                AutoSize = true,
+                Location = new Point(30, 25)
+            };
 
-                int distance = Math.Abs(guess - _target);
-                if (distance == 0) BackColor = Color.LightGreen;
-                else if (distance <= 5) BackColor = Color.LightGoldenrodYellow;
-                else if (distance <= 10) BackColor = Color.Khaki;
-                else BackColor = Color.LightCoral;
-
-                int progress = 100 - (distance * 100 / _maxRange);
-                _progressBar.Value = Math.Clamp(progress, 0, 100);
-
-                if (guess == _target)
-                {
-                    _stopwatch.Stop();
-                    _winPlayer.Play();
-                    var time = (int)_stopwatch.Elapsed.TotalSeconds;
-                    var msg = _successMessages[_random.Next(_successMessages.Length)];
-
-                    RecordScore(time);
-                    MessageBox.Show($"{msg}\n{Strings.Attempts}: {_attempts}\n{Strings.Time}: {time}s", Strings.CongratsTitle);
-                    StartNewGame();
-                    return;
-                }
-                else
-                {
-                    PlayRandomLoseSound();
-                    _resultLabel.Text = guess < _target ? Strings.TooLow : Strings.TooHigh;
-                    if (_attempts >= 3)
-                    {
-                        if (distance <= 10 && distance > 0)
-                            _resultLabel.Text += " (" + Strings.Within10 + ")";
-                        else
-                            _resultLabel.Text += guess < _target ? " ↑" : " ↓";
-                    }
-                }
-
-                _timerLabel.Text = Strings.Time + $": {(int)_stopwatch.Elapsed.TotalSeconds}s";
-            }
-            else
+            var box = new TextBox
             {
-                _resultLabel.Text = Strings.InvalidInput;
-            }
+                Location = new Point(30, 60),
+                Width = 320,
+                Height = 30,
+                Font = new Font("Segoe UI", 12),
+                BorderStyle = BorderStyle.FixedSingle
+            };
 
-            _inputBox.Focus();
+            // Create button container panel for centered alignment
+            var buttonPanel = new TableLayoutPanel
+            {
+                Width = 320,
+                Height = 45,
+                Location = new Point(30, 100),
+                ColumnCount = 4,
+                RowCount = 1,
+                Margin = new Padding(0),
+                Padding = new Padding(0)
+            };
+
+            // Set up column styles for proper spacing and centering
+            buttonPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50)); // Left spacing
+            buttonPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize)); // Cancel button
+            buttonPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize)); // Save button
+            buttonPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50)); // Right spacing
+
+            var ok = new Button
+            {
+                Text = "Save Score",
+                DialogResult = DialogResult.OK,
+                Width = 110,
+                Height = 35,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(0, 120, 215),
+                ForeColor = Color.White,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(10, 0, 0, 0)
+            };
+            ok.FlatAppearance.BorderSize = 0;
+
+            var cancel = new Button
+            {
+                Text = "Cancel",
+                DialogResult = DialogResult.Cancel,
+                Width = 110,
+                Height = 35,
+                Font = new Font("Segoe UI", 10),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.LightGray,
+                ForeColor = Color.Black,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0)
+            };
+            cancel.FlatAppearance.BorderSize = 0;
+
+            buttonPanel.Controls.Add(cancel, 1, 0);
+            buttonPanel.Controls.Add(ok, 2, 0);
+
+            // Add hover effects
+            ok.MouseEnter += (s, e) => ok.BackColor = Color.FromArgb(0, 100, 200);
+            ok.MouseLeave += (s, e) => ok.BackColor = Color.FromArgb(0, 120, 215);
+            cancel.MouseEnter += (s, e) => cancel.BackColor = Color.FromArgb(220, 220, 220);
+            cancel.MouseLeave += (s, e) => cancel.BackColor = Color.LightGray;
+
+            form.Controls.AddRange(new Control[] { label, box, buttonPanel });
+            form.AcceptButton = ok;
+            form.CancelButton = cancel;
+
+            // Focus the text box when the form opens
+            form.Shown += (s, e) => box.Focus();
+
+            return form.ShowDialog() == DialogResult.OK && !string.IsNullOrWhiteSpace(box.Text)
+                ? box.Text.Trim()
+                : "Anonymous";
         }
     }
 
     public class ScoreEntry
     {
-        public string Name { get; set; }
-        public int Attempts { get; set; }
-        public int Time { get; set; }
-
-        public override string ToString()
-        {
-            return $"{Name,-10}  {Attempts,3} tries  {Time,3}s";
-        }
+        public string Name { get; }
+        public int Attempts { get; }
+        public int Time { get; }
+        public ScoreEntry(string name, int attempts, int time) => (Name, Attempts, Time) = (name, attempts, time);
     }
-} 
+}
