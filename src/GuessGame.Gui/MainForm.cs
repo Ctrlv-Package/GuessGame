@@ -78,47 +78,112 @@ namespace GuessGame.Gui
                 Icon = SystemIcons.Information;
                 ClientSize = new Size(700, 600);
                 StartPosition = FormStartPosition.CenterScreen;
-                Font = new Font(Font.FontFamily, 14);
+                BackColor = Color.FromArgb(245, 245, 245);
+                FormBorderStyle = FormBorderStyle.FixedSingle;
+                Font = new Font("Segoe UI", 14);
                 _defaultBackColor = BackColor;
 
-                _promptLabel = new Label { Text = Strings.GuessPrompt, AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
+                _promptLabel = new Label
+                {
+                    Text = Strings.GuessPrompt,
+                    AutoSize = true,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Dock = DockStyle.Fill,
+                    Font = new Font("Segoe UI", 16, FontStyle.Bold)
+                };
 
-                _difficultyBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200, Font = new Font(Font.FontFamily, 14), Height = 40 };
+                _difficultyBox = new ComboBox
+                {
+                    DropDownStyle = ComboBoxStyle.DropDownList,
+                    FlatStyle = FlatStyle.Flat,
+                    Width = 200,
+                    Font = new Font("Segoe UI", 14),
+                    Height = 40
+                };
                 _difficultyBox.Items.AddRange(new[] { Strings.Easy, Strings.Medium, Strings.Hard });
                 _difficultyBox.SelectedIndex = 1;
                 _difficultyBox.SelectedIndexChanged += (_, _) => ChangeDifficulty();
 
-                _languageBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200, Font = new Font(Font.FontFamily, 14), Height = 40 };
+                _languageBox = new ComboBox
+                {
+                    DropDownStyle = ComboBoxStyle.DropDownList,
+                    FlatStyle = FlatStyle.Flat,
+                    Width = 200,
+                    Font = new Font("Segoe UI", 14),
+                    Height = 40
+                };
                 _languageBox.Items.AddRange(new[] { "English", "Español", "Русский" });
                 _languageBox.SelectedIndexChanged += LanguageBox_SelectedIndexChanged;
                 _languageBox.SelectedIndex = GetLanguageIndex();
 
-                _inputBox = new TextBox { Font = new Font(Font.FontFamily, 14), Margin = new Padding(0, 5, 10, 5), MinimumSize = new Size(100, 35) };
+                _inputBox = new TextBox
+                {
+                    Font = new Font("Segoe UI", 14),
+                    Margin = new Padding(0, 5, 10, 5),
+                    MinimumSize = new Size(100, 35),
+                    BorderStyle = BorderStyle.FixedSingle
+                };
 
                 _guessButton = new Button
                 {
                     Text = Strings.Guess,
-                    BackColor = Color.MediumSlateBlue,
+                    BackColor = Color.FromArgb(0, 120, 215),
                     ForeColor = Color.White,
                     FlatStyle = FlatStyle.Flat,
-                    Font = new Font(Font.FontFamily, 14, FontStyle.Bold),
+                    Font = new Font("Segoe UI", 14, FontStyle.Bold),
                     TextAlign = ContentAlignment.MiddleCenter,
                     UseCompatibleTextRendering = true,
                     Dock = DockStyle.Fill,
                     Margin = new Padding(0, 5, 0, 5)
                 };
+                _guessButton.FlatAppearance.BorderSize = 0;
                 _guessButton.Click += OnGuess;
                 AcceptButton = _guessButton;
                 _guessButton.Enabled = false;
                 _inputBox.TextChanged += (_, _) =>
                     _guessButton.Enabled = !string.IsNullOrWhiteSpace(_inputBox.Text);
 
-                _resultLabel = new Label { AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
-                _attemptsLabel = new Label { AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
-                _timerLabel = new Label { AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
-                _bestScoreLabel = new Label { AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
-                _leaderboardBox = new ListBox { Dock = DockStyle.Fill, Height = 200, Font = new Font("Consolas", 12) };
-                _progressBar = new ProgressBar { Dock = DockStyle.Fill, Maximum = 100 };
+                _resultLabel = new Label
+                {
+                    AutoSize = true,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Dock = DockStyle.Fill,
+                    Font = new Font("Segoe UI", 12)
+                };
+                _attemptsLabel = new Label
+                {
+                    AutoSize = true,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Dock = DockStyle.Fill,
+                    Font = new Font("Segoe UI", 12)
+                };
+                _timerLabel = new Label
+                {
+                    AutoSize = true,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Dock = DockStyle.Fill,
+                    Font = new Font("Segoe UI", 12)
+                };
+                _bestScoreLabel = new Label
+                {
+                    AutoSize = true,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Dock = DockStyle.Fill,
+                    Font = new Font("Segoe UI", 12)
+                };
+                _leaderboardBox = new ListBox
+                {
+                    Dock = DockStyle.Fill,
+                    Height = 200,
+                    Font = new Font("Consolas", 12),
+                    BorderStyle = BorderStyle.None
+                };
+                _progressBar = new ProgressBar
+                {
+                    Dock = DockStyle.Fill,
+                    Maximum = 100,
+                    Style = ProgressBarStyle.Continuous
+                };
 
                 var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 10 };
                 for (int i = 0; i < 9; i++) layout.RowStyles.Add(new RowStyle(SizeType.Percent, 8F));
