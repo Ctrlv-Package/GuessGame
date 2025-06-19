@@ -745,7 +745,7 @@ namespace GuessGame.Gui
                     _difficultyLabel.Text = "Difficulty";
                     _themeLabel.Text = "Theme";
                     _difficultyBox.Items.Clear();
-                    _difficultyBox.Items.AddRange(new[] { "Easy (1-100)", "Medium (1-500)", "Hard (1-1000)" });
+                    _difficultyBox.Items.AddRange(new[] { "Easy (1-50)", "Medium (1-100)", "Hard (1-500)" });
                     _difficultyBox.SelectedIndex = currentDifficulty;
                     _themeBox.Items.Clear();
                     _themeBox.Items.AddRange(new[] { "Light", "Dark" });
