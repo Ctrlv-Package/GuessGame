@@ -517,7 +517,7 @@ namespace GuessGame.Gui
             _leaderboardGrid.DefaultCellStyle.SelectionForeColor = fgColor;
 
             _leaderboardGrid.Rows.Clear();
-            foreach (var score in _scores.OrderBy(s => s.Attempts).ThenBy(s => s.Time).Take(10))
+            foreach (var score in _scores.OrderBy(s => s.Attempts).ThenBy(s => s.Time).Take(15))
             {
                 var attemptsText = _languageBox.SelectedIndex switch
                 {
@@ -668,6 +668,16 @@ namespace GuessGame.Gui
 
         private async Task RecordScoreAsync(int time)
         {
+            // Check if this score would make it into the top 15
+            var wouldMakeTopList = _scores.Count < 15 || _scores.OrderBy(s => s.Attempts).ThenBy(s => s.Time)
+                .Take(15).Any(s => s.Attempts > _attempts || (s.Attempts == _attempts && s.Time > time));
+
+            if (!wouldMakeTopList)
+            {
+                // Score wouldn't make it to the leaderboard, no need to ask for name
+                return;
+            }
+
             var name = PromptForName();
             if (string.IsNullOrWhiteSpace(name)) return;
 
@@ -676,6 +686,12 @@ namespace GuessGame.Gui
             _scores.Sort((a, b) => a.Attempts == b.Attempts ? 
                 a.Time.CompareTo(b.Time) : 
                 a.Attempts.CompareTo(b.Attempts));
+            
+            // Trim list to keep only top 15
+            if (_scores.Count > 15)
+            {
+                _scores.RemoveRange(15, _scores.Count - 15);
+            }
 
             try
             {
