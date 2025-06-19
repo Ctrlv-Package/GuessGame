@@ -53,7 +53,15 @@ namespace GuessGame.Gui
 
         private readonly TextBox _inputBox = new() { Width = 100, Font = new Font("Segoe UI", 12) };
         private readonly Button _guessButton = new() { Text = "Guess", Width = 120, Font = new Font("Segoe UI", 12, FontStyle.Bold), AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, MinimumSize = new Size(120, 35), Padding = new Padding(10, 5, 10, 5) };
-        private readonly ProgressBar _progressBar = new() { Height = 20, Style = ProgressBarStyle.Continuous };
+        private readonly ColorProgressBar _progressBar = new()
+        {
+            Height = 35,
+            Margin = new Padding(20, 10, 20, 10),
+            MinimumSize = new Size(0, 35),
+            Maximum = 100,
+            Value = 0,
+            Dock = DockStyle.Fill
+        };
 
         private readonly ComboBox _languageBox = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 120 };
         private readonly ComboBox _difficultyBox = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 120 };
@@ -292,10 +300,19 @@ namespace GuessGame.Gui
             inputPanel.Controls.Add(_inputBox, 0, 0);
             inputPanel.Controls.Add(_guessButton, 1, 0);
 
+            // Progress bar panel for fixed height
+            var progressPanel = new Panel
+            {
+                Height = 35,
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0, 10, 0, 10)
+            };
+            progressPanel.Controls.Add(_progressBar);
+
             gamePanel.Controls.Add(_promptLabel);
             gamePanel.Controls.Add(inputPanel);
             gamePanel.Controls.Add(_resultLabel);
-            gamePanel.Controls.Add(_progressBar);
+            gamePanel.Controls.Add(progressPanel);
             gamePanel.Controls.Add(_attemptsLabel);
             gamePanel.Controls.Add(_timerLabel);
 
@@ -375,6 +392,7 @@ namespace GuessGame.Gui
             _attempts = 0;
             _resultLabel.Text = "";
             _progressBar.Value = 0;
+            _progressBar.ProgressColor = Color.FromArgb(0, 120, 215); // Reset to default blue
             _inputBox.Clear();
             _inputBox.Focus();
             _stopwatch.Restart();
@@ -479,12 +497,77 @@ namespace GuessGame.Gui
 
             _attempts++;
             _attemptsLabel.Text = $"Attempts: {_attempts}";
-            _progressBar.Value = Math.Min(_attempts, _maxRange);
+            
+            // Calculate how close we are to the target using a non-linear scale
+            int distance = Math.Abs(guess - _target);
+            
+            // Use different scaling based on difficulty level
+            double maxError = _maxRange / 2.0; // Max reasonable error (half the range)
+            double normalizedDistance = Math.Min(distance, maxError) / maxError;
+            
+            // Apply non-linear scaling to make colors more dramatic
+            double proximity = Math.Pow(1.0 - normalizedDistance, 2);
+            int percentage = (int)(proximity * 100);
+
+            // Calculate color based on proximity
+            Color progressColor;
+            if (proximity < 0.2) // Very far (bright red)
+            {
+                progressColor = Color.FromArgb(255, 0, 0);
+            }
+            else if (proximity < 0.4) // Far (orange-red)
+            {
+                progressColor = Color.FromArgb(255, 69, 0);
+            }
+            else if (proximity < 0.6) // Medium (orange)
+            {
+                progressColor = Color.FromArgb(255, 140, 0);
+            }
+            else if (proximity < 0.8) // Getting closer (yellow)
+            {
+                progressColor = Color.FromArgb(255, 215, 0);
+            }
+            else if (proximity < 0.95) // Close (yellow-green)
+            {
+                progressColor = Color.FromArgb(154, 205, 50);
+            }
+            else // Very close (bright green)
+            {
+                progressColor = Color.FromArgb(0, 255, 0);
+            }
+            _progressBar.ProgressColor = progressColor;
+
+            // Smoothly animate to the new value with easing
+            var currentValue = _progressBar.Value;
+            var totalSteps = 15;
+            var stepDelay = 15; // milliseconds
+            
+            for (int i = 0; i < totalSteps; i++)
+            {
+                // Use easing function for smoother animation
+                var t = (i + 1.0) / totalSteps;
+                var easedT = 1 - Math.Pow(1 - t, 3); // Ease out cubic
+                var newValue = currentValue + (percentage - currentValue) * easedT;
+                _progressBar.Value = (int)Math.Round(newValue);
+                await Task.Delay(stepDelay);
+            }
+            _progressBar.Value = percentage; // Ensure we end exactly at target
 
             if (guess == _target)
             {
                 _stopwatch.Stop();
                 try { _winPlayer.Play(); } catch { /* Ignore sound errors */ }
+{
+    try
+    {
+        var json = JsonSerializer.Serialize(_scores, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(_scoresPath, json);
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"Error saving scores: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+}
                 int time = (int)_stopwatch.Elapsed.TotalSeconds;
                 await RecordScoreAsync(time);
                 MessageBox.Show($"You guessed it!\nAttempts: {_attempts}\nTime: {time}s", "Congratulations!");
@@ -494,7 +577,6 @@ namespace GuessGame.Gui
             {
                 _resultLabel.Text = guess < _target ? "Too low!" : "Too high!";
                 _resultLabel.ForeColor = Color.Red;
-                _progressBar.Value = (int)((_maxRange - Math.Abs(guess - _target)) * 100.0 / _maxRange);
                 
                 // Play a random lose sound
                 try
