@@ -48,24 +48,22 @@ namespace GuessGame.Gui
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            base.OnPaint(e);
             var rect = ClientRectangle;
             
-            // Draw background
-            using (var backBrush = new SolidBrush(BackColor))
+            // Draw background with a border to make it visible in both light and dark modes
+            e.Graphics.FillRectangle(new SolidBrush(BackColor), rect);
+            using (var borderPen = new Pen(Color.FromArgb(100, 100, 100)))
             {
-                e.Graphics.FillRectangle(backBrush, rect);
+                e.Graphics.DrawRectangle(borderPen, 0, 0, rect.Width - 1, rect.Height - 1);
             }
-
-            // Draw progress
+            
             if (Value > 0)
             {
-                var width = (int)((rect.Width * Value) / (double)Maximum);
+                var width = (int)((Value / (double)Maximum) * rect.Width);
                 var progressRect = new Rectangle(rect.X, rect.Y, width, rect.Height);
-                
-                using (var foreBrush = new SolidBrush(ProgressColor))
+                using (var brush = new SolidBrush(ProgressColor))
                 {
-                    e.Graphics.FillRectangle(foreBrush, progressRect);
+                    e.Graphics.FillRectangle(brush, progressRect);
                 }
             }
         }

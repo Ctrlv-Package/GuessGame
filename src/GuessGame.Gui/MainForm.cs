@@ -51,7 +51,16 @@ namespace GuessGame.Gui
         private readonly Label _difficultyLabel = new() { Text = "Difficulty", Font = new Font("Segoe UI", 10) };
         private readonly Label _themeLabel = new() { Text = "Theme", Font = new Font("Segoe UI", 10) };
 
-        private readonly TextBox _inputBox = new() { Width = 100, Font = new Font("Segoe UI", 12) };
+        private readonly TextBox _inputBox = new()
+        {
+            Width = 100,
+            Font = new Font("Segoe UI", 12),
+            BackColor = Color.White,
+            ForeColor = Color.Black,
+            TextAlign = HorizontalAlignment.Center,
+            MaxLength = 4,
+            BorderStyle = BorderStyle.FixedSingle
+        };
         private readonly Button _guessButton = new() { Text = "Guess", Width = 120, Font = new Font("Segoe UI", 12, FontStyle.Bold), AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, MinimumSize = new Size(120, 35), Padding = new Padding(10, 5, 10, 5) };
         private readonly ColorProgressBar _progressBar = new()
         {
@@ -224,9 +233,9 @@ namespace GuessGame.Gui
                 box.DropDownStyle = ComboBoxStyle.DropDownList;
                 box.Font = new Font("Segoe UI", 11);
                 box.Cursor = Cursors.Hand;
-                box.BackColor = Color.White;
+                box.BackColor = SystemColors.Window;
                 box.FlatStyle = FlatStyle.Flat;
-                box.ForeColor = Color.Black;
+                box.ForeColor = SystemColors.WindowText;
             }
             
             SetupComboBox(_languageBox);
@@ -629,9 +638,29 @@ namespace GuessGame.Gui
             {
                 BackColor = Color.FromArgb(30, 30, 30);
                 ForeColor = Color.White;
+                
+                // Special handling for input box in dark mode
+                _inputBox.BackColor = Color.White;
+                _inputBox.ForeColor = Color.Black;
+                
+                // Special handling for combo boxes in dark mode
+                void SetDarkComboBox(ComboBox box)
+                {
+                    box.BackColor = Color.White;
+                    box.ForeColor = Color.Black;
+                }
+                
+                SetDarkComboBox(_languageBox);
+                SetDarkComboBox(_difficultyBox);
+                SetDarkComboBox(_themeBox);
+                
+                // Special handling for progress bar in dark mode
+                _progressBar.BackColor = Color.FromArgb(60, 60, 60);
+                
                 foreach (var control in ControlsRecursive())
                 {
-                    if (control is DataGridView) continue;
+                    if (control is DataGridView || control == _inputBox || control == _progressBar ||
+                        control == _languageBox || control == _difficultyBox || control == _themeBox) continue;
                     control.BackColor = Color.FromArgb(30, 30, 30);
                     control.ForeColor = Color.White;
                 }
@@ -640,9 +669,29 @@ namespace GuessGame.Gui
             {
                 BackColor = GameSettings.DefaultBackColor;
                 ForeColor = GameSettings.DefaultForeColor;
+                
+                // Reset input box colors
+                _inputBox.BackColor = Color.White;
+                _inputBox.ForeColor = Color.Black;
+                
+                // Reset combo box colors
+                void SetLightComboBox(ComboBox box)
+                {
+                    box.BackColor = Color.White;
+                    box.ForeColor = Color.Black;
+                }
+                
+                SetLightComboBox(_languageBox);
+                SetLightComboBox(_difficultyBox);
+                SetLightComboBox(_themeBox);
+                
+                // Reset progress bar colors
+                _progressBar.BackColor = Color.White;
+                
                 foreach (var control in ControlsRecursive())
                 {
-                    if (control is DataGridView) continue;
+                    if (control is DataGridView || control == _inputBox || control == _progressBar ||
+                        control == _languageBox || control == _difficultyBox || control == _themeBox) continue;
                     control.BackColor = GameSettings.DefaultBackColor;
                     control.ForeColor = GameSettings.DefaultForeColor;
                 }
