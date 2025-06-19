@@ -21,6 +21,7 @@ namespace GuessGame.Gui
         public static readonly Color DefaultForeColor = SystemColors.ControlText;
         public static readonly string SoundsDirectory = "Sounds";
         public static readonly string WinSoundPath = Path.Combine(SoundsDirectory, "win.wav");
+        public static readonly string SettingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
     }
 
     public class ScoreEntry
@@ -170,8 +171,11 @@ namespace GuessGame.Gui
             _leaderboardGrid.AllowUserToResizeRows = false;
             _leaderboardGrid.RowHeadersVisible = false;
             _leaderboardGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            _leaderboardGrid.EnableHeadersVisualStyles = false;
+            UpdateLeaderboard(); // Set initial colors
 
             _isInitializing = false;
+            LoadSettings();
             LoadScoresAsync().ConfigureAwait(false);
             StartNewGameAsync().ConfigureAwait(false);
         }
@@ -426,6 +430,42 @@ namespace GuessGame.Gui
             }
         }
 
+        private void SaveSettings()
+        {
+            var settings = new { Theme = _themeBox.SelectedIndex, Language = _languageBox.SelectedIndex };
+            try
+            {
+                File.WriteAllText(GameSettings.SettingsPath, JsonSerializer.Serialize(settings));
+            }
+            catch
+            {
+                // Ignore save errors
+            }
+        }
+
+        private async void LoadSettings()
+        {
+            try
+            {
+                if (File.Exists(GameSettings.SettingsPath))
+                {
+                    var settings = JsonSerializer.Deserialize<dynamic>(File.ReadAllText(GameSettings.SettingsPath));
+                    if (settings != null)
+                    {
+                        _isInitializing = true; // Prevent theme toggle during load
+                        _themeBox.SelectedIndex = settings.GetProperty("Theme").GetInt32();
+                        _isInitializing = false;
+                        ToggleTheme(); // Apply theme immediately
+                        await LoadScoresAsync(); // Reload scores after theme change
+                    }
+                }
+            }
+            catch
+            {
+                // Use default settings on load error
+            }
+        }
+
         private async Task LoadScoresAsync()
         {
             if (File.Exists(_scoresPath))
@@ -450,6 +490,7 @@ namespace GuessGame.Gui
             {
                 var json = JsonSerializer.Serialize(_scores, new JsonSerializerOptions { WriteIndented = true });
                 await File.WriteAllTextAsync(_scoresPath, json);
+                await LoadScoresAsync(); // Reload to refresh the grid
             }
             catch (Exception ex)
             {
@@ -459,6 +500,22 @@ namespace GuessGame.Gui
 
         private void UpdateLeaderboard()
         {
+            // Set grid colors based on theme
+            var isDark = _themeBox.SelectedIndex == 1;
+            var bgColor = isDark ? Color.FromArgb(30, 30, 30) : Color.White;
+            var fgColor = isDark ? Color.White : Color.Black;
+            
+            _leaderboardGrid.BackgroundColor = bgColor;
+            _leaderboardGrid.DefaultCellStyle.BackColor = bgColor;
+            _leaderboardGrid.DefaultCellStyle.ForeColor = fgColor;
+            _leaderboardGrid.ColumnHeadersDefaultCellStyle.BackColor = bgColor;
+            _leaderboardGrid.ColumnHeadersDefaultCellStyle.ForeColor = fgColor;
+            _leaderboardGrid.EnableHeadersVisualStyles = false;
+
+            // Set selection colors for better visibility in dark mode
+            _leaderboardGrid.DefaultCellStyle.SelectionBackColor = isDark ? Color.FromArgb(60, 60, 60) : SystemColors.Highlight;
+            _leaderboardGrid.DefaultCellStyle.SelectionForeColor = fgColor;
+
             _leaderboardGrid.Rows.Clear();
             foreach (var score in _scores.OrderBy(s => s.Attempts).ThenBy(s => s.Time).Take(10))
             {
@@ -579,6 +636,7 @@ namespace GuessGame.Gui
 }
                 int time = (int)_stopwatch.Elapsed.TotalSeconds;
                 await RecordScoreAsync(time);
+                await SaveScoresAsync(); // Save and refresh leaderboard
                 MessageBox.Show($"You guessed it!\nAttempts: {_attempts}\nTime: {time}s", "Congratulations!");
                 await StartNewGameAsync();
             }
@@ -634,6 +692,11 @@ namespace GuessGame.Gui
         private void ToggleTheme()
         {
             var isDark = _themeBox.SelectedIndex == 1;
+            SaveSettings();
+            
+            // Update leaderboard colors for the new theme
+            UpdateLeaderboard();
+
             if (isDark)
             {
                 BackColor = Color.FromArgb(30, 30, 30);
@@ -659,7 +722,7 @@ namespace GuessGame.Gui
                 
                 foreach (var control in ControlsRecursive())
                 {
-                    if (control is DataGridView || control == _inputBox || control == _progressBar ||
+                    if (control == _inputBox || control == _progressBar ||
                         control == _languageBox || control == _difficultyBox || control == _themeBox) continue;
                     control.BackColor = Color.FromArgb(30, 30, 30);
                     control.ForeColor = Color.White;
@@ -690,7 +753,7 @@ namespace GuessGame.Gui
                 
                 foreach (var control in ControlsRecursive())
                 {
-                    if (control is DataGridView || control == _inputBox || control == _progressBar ||
+                    if (control == _inputBox || control == _progressBar ||
                         control == _languageBox || control == _difficultyBox || control == _themeBox) continue;
                     control.BackColor = GameSettings.DefaultBackColor;
                     control.ForeColor = GameSettings.DefaultForeColor;
