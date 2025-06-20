@@ -1,8 +1,0 @@
-Pedro,11,43
-Anonymous,11,55
-Pedro,6,21
-Pedro,8,29
-Anonymous,10,60
-Pedro,8,23
-Anonymous,9,34
-Pedro,1,6
