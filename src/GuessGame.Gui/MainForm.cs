@@ -33,6 +33,37 @@ namespace GuessGame.Gui
 
     public partial class MainForm : Form
     {
+        private bool _testMode = false;
+
+        // Test support methods
+        public int MaxRange => _maxRange;
+        public int Attempts => _attempts;
+
+        public void SetTestMode(bool enabled)
+        {
+            _testMode = enabled;
+        }
+
+        public void SetTargetNumber(int target)
+        {
+            _target = target;
+        }
+
+        public string ProcessGuess(int guess)
+        {
+            if (guess < 1 || guess > _maxRange)
+                throw new ArgumentOutOfRangeException(nameof(guess), $"Guess must be between 1 and {_maxRange}");
+
+            _attempts++;
+
+            if (guess == _target)
+                return "Correct!";
+            
+            return guess < _target ? "Too low!" : "Too high!";
+        }
+
+        public List<ScoreEntry> GetScores() => new List<ScoreEntry>(_scores);
+
         private readonly string _scoresPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "scores.json");
         private readonly Random _random = new();
         private readonly Stopwatch _stopwatch = new();
