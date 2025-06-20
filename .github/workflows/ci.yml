@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+        
+    - name: Restore dependencies
+      run: |
+        dotnet restore src/GuessGame.sln
+        dotnet restore tests/GuessGame.Tests.sln
+        
+    - name: Build
+      run: |
+        dotnet build src/GuessGame.sln --no-restore
+        dotnet build tests/GuessGame.Tests.sln --no-restore
+        
+    - name: Test
+      run: dotnet test tests/GuessGame.Tests.sln --no-build --verbosity normal
