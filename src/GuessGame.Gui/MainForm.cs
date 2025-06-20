@@ -668,29 +668,46 @@ namespace GuessGame.Gui
 
         private async Task RecordScoreAsync(int time)
         {
-            // Check if this score would make it into the top 15
-            var wouldMakeTopList = _scores.Count < 15 || _scores.OrderBy(s => s.Attempts).ThenBy(s => s.Time)
-                .Take(15).Any(s => s.Attempts > _attempts || (s.Attempts == _attempts && s.Time > time));
-
-            if (!wouldMakeTopList)
+            // If we have less than 15 scores, always record
+            if (_scores.Count < 15)
             {
-                // Score wouldn't make it to the leaderboard, no need to ask for name
+                var name = PromptForName();
+                if (string.IsNullOrWhiteSpace(name)) return;
+
+                var score = new ScoreEntry { Name = name, Attempts = _attempts, Time = time };
+                _scores.Add(score);
+                _scores.Sort((a, b) => a.Attempts == b.Attempts ? 
+                    a.Time.CompareTo(b.Time) : 
+                    a.Attempts.CompareTo(b.Attempts));
                 return;
             }
 
-            var name = PromptForName();
-            if (string.IsNullOrWhiteSpace(name)) return;
+            // Get the worst score in top 15
+            var worstScore = _scores
+                .OrderBy(s => s.Attempts)
+                .ThenBy(s => s.Time)
+                .Take(15)
+                .LastOrDefault();
 
-            var score = new ScoreEntry { Name = name, Attempts = _attempts, Time = time };
-            _scores.Add(score);
-            _scores.Sort((a, b) => a.Attempts == b.Attempts ? 
-                a.Time.CompareTo(b.Time) : 
-                a.Attempts.CompareTo(b.Attempts));
-            
-            // Trim list to keep only top 15
-            if (_scores.Count > 15)
+            // Only ask for name if we beat the worst score
+            if (worstScore == null || 
+                _attempts < worstScore.Attempts || 
+                (_attempts == worstScore.Attempts && time < worstScore.Time))
             {
-                _scores.RemoveRange(15, _scores.Count - 15);
+                var name = PromptForName();
+                if (string.IsNullOrWhiteSpace(name)) return;
+
+                var score = new ScoreEntry { Name = name, Attempts = _attempts, Time = time };
+                _scores.Add(score);
+                _scores.Sort((a, b) => a.Attempts == b.Attempts ? 
+                    a.Time.CompareTo(b.Time) : 
+                    a.Attempts.CompareTo(b.Attempts));
+                
+                // Trim list to keep only top 15
+                if (_scores.Count > 15)
+                {
+                    _scores.RemoveRange(15, _scores.Count - 15);
+                }
             }
 
             try
